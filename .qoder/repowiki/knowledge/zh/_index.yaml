@@ -1,0 +1,42 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+commit: 36e074a2fb365aa788886495c82e6ea612226cd9
+branch: wiki
+exported_at: "2026-11-10T08:38:26Z"
+modules:
+    root:
+        dir_name: Codex 仓库根配置与构建编排
+        title: Codex 仓库根配置与构建编排
+        scope:
+            - README.md
+            - SECURITY.md
+            - announcement_tip.toml
+            - justfile
+            - package.json
+            - pnpm-workspace.yaml
+            - pnpm-lock.yaml
+            - .bazelignore
+            - .bazelrc
+            - .codespellignore
+            - .codespellrc
+            - .gitattributes
+            - .gitignore
+            - .markdownlint-cli2.yaml
+            - .npmrc
+            - .prettierignore
+            - .prettierrc.toml
+            - .worktreeinclude
+            - BUILD.bazel
+            - MODULE.bazel
+            - defs.bzl
+            - flake.lock
+            - flake.nix
+            - rbe.bzl
+            - ruff.toml
+            - workspace_root_test_launcher.bat.tpl
+            - workspace_root_test_launcher.sh.tpl
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

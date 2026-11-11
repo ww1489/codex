@@ -1,0 +1,76 @@
+schema_version: 1
+module_path: root
+title: Codex 仓库根配置与构建编排
+scope:
+    - README.md
+    - SECURITY.md
+    - announcement_tip.toml
+    - justfile
+    - package.json
+    - pnpm-workspace.yaml
+    - pnpm-lock.yaml
+    - .bazelignore
+    - .bazelrc
+    - .codespellignore
+    - .codespellrc
+    - .gitattributes
+    - .gitignore
+    - .markdownlint-cli2.yaml
+    - .npmrc
+    - .prettierignore
+    - .prettierrc.toml
+    - .worktreeinclude
+    - BUILD.bazel
+    - MODULE.bazel
+    - defs.bzl
+    - flake.lock
+    - flake.nix
+    - rbe.bzl
+    - ruff.toml
+    - workspace_root_test_launcher.bat.tpl
+    - workspace_root_test_launcher.sh.tpl
+source_files: []
+depends_on: []
+related_to: []
+kk_module_id: 2982be52-e0f3-4b8a-801d-7719c59251ea
+kk_cards:
+    architecture_design:
+        id: 4ed2973f-2fab-48af-a5ab-10935d328d23
+        title: Codex 仓库根配置与构建编排
+    coding_conventions:
+        id: d53f3cf0-4af0-4fac-8c4a-ca8df3c90946
+        title: Codex 仓库根配置与构建编排
+    overview:
+        id: 32afcfd2-0ed4-40be-9fd1-209188ffce3d
+        title: Codex 仓库根配置与构建编排
+    tech_stack:
+        id: 8b293951-8e8e-4b37-957a-c76164ed1082
+        title: Codex 仓库根配置与构建编排
+    unique_setup_and_commands:
+        id: de41f8fc-6c37-4390-9593-7e61ce116688
+        title: Codex 仓库根配置与构建编排
+    build_system:
+        id: 1d309441-fe30-452e-a2b0-c3721d0babcf
+        title: 多工具链构建编排：Bazel + Cargo + Nix + GitHub Actions
+    configuration_system:
+        id: a9ae10fe-5717-4212-bb40-26f229d027ae
+        title: Codex 配置系统：多层 TOML 加载、需求层与云端管理配置
+    dependency_management:
+        id: 0eec9108-0b10-410d-9f3f-5f2bca7b4765
+        title: 多语言依赖管理：Bazel MODULE、pnpm workspace、Cargo workspace、Nix flake 与 Dependabot
+    error_handling:
+        id: ea1640fa-a7de-43e7-8695-4aab685f2f7c
+        title: Codex 仓库错误处理体系：thiserror 枚举 + CodexErr 语义分类
+    frontend_style:
+        id: 762d556a-5e77-4664-9dce-2ee874ccd10a
+        title: Codex TUI 终端样式系统：Ratatui + 语义化主题与 CSS 变量内联可视化
+    logging_system:
+        id: bdccef99-d0c2-4cb5-8b11-e3a40268b954
+        title: 基于 tracing + tracing_subscriber 的结构化日志系统
+kk_repo_cards:
+    - build_system
+    - configuration_system
+    - dependency_management
+    - error_handling
+    - frontend_style
+    - logging_system
