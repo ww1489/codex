@@ -106,6 +106,8 @@ pub enum Feature {
     ApiKeyCyberAccessPrograms,
     /// Enable Daybreak controls and automatic access-program selection in CLI clients.
     CliDaybreak,
+    /// Capture the saved Daybreak choice for a native helper and its turns.
+    DaybreakProgramPropagation,
     /// Restrict CLI resume of attributed local threads to their creator.
     CliResumeAccountCheck,
     /// Removed no-op; use `tui.fullscreen_transcript` instead.
@@ -159,6 +161,8 @@ pub enum Feature {
     CodeModeHostOutputTruncation,
     /// Establish the code-mode host connection during session startup.
     CodeModePrewarm,
+    /// Warm persisted thread history before the first generation on cold resume.
+    RestoredHistoryPrewarm,
     /// Terminate active code mode cells when their turn is interrupted.
     CodeModeInterrupt,
     /// Removed compatibility flag for Code Mode tool description ordering.
@@ -212,6 +216,8 @@ pub enum Feature {
     ShellSnapshotV2,
     /// Allow turns to start while selected executors are still starting.
     DeferredExecutor,
+    /// Describe each selected environment's filesystem and permissions separately.
+    PerEnvironmentContext,
     /// Use the current working directory for turn diff display paths.
     CwdRelativeTurnDiffs,
     /// Enable runtime metrics snapshots via a manual reader.
@@ -276,6 +282,8 @@ pub enum Feature {
     SpawnCsv,
     /// Enable apps.
     Apps,
+    /// Use Apps usage instructions from the selected model's catalog entry.
+    CatalogAppsInstructions,
     /// Route first-party ChatGPT requests through PSP.
     Psp,
     /// Enable MCP apps.
@@ -286,8 +294,12 @@ pub enum Feature {
     McpToolListChanged,
     /// Discover and share eligible local stdio connections across chats.
     McpConnectionSharing,
+    /// Use the app server's fixed launch directories for shared REPL servers.
+    McpSharedReplCwd,
     /// Defer optional stdio server startup in regular chats with a warm tool catalog.
     McpLazyStdioStartup,
+    /// Keep same-named HTTP servers discovered on different executors separate.
+    MultiEnvironmentMcp,
     /// Enable MCP protocol version 2026-07-28 for the host-owned Codex Apps server.
     CodexAppsMcp20260728,
     /// Let host-owned Apps catalog reads overlap the initial tool inventory.
@@ -310,6 +322,8 @@ pub enum Feature {
     IncrementalTools,
     /// Publish incremental tool declarations on regular Amazon Bedrock Responses.
     IncrementalToolsLegacy,
+    /// Publish incremental tool declarations on regular GCP Responses.
+    IncrementalToolsLegacyGcp,
     /// Suppress the model ID announcement in incremental context after a model switch.
     SuppressModelChangeAnnouncements,
     /// Preserve inherited tool declarations in MCP-disabled prediction forks.
@@ -394,8 +408,12 @@ pub enum Feature {
     ImageGenerationAnimation,
     /// Omit inline image and audio content from app-server item notifications.
     OmitAppServerNotificationMedia,
+    /// Allow this host's attachment store to prepare fresh tool audio before persistence.
+    FileBackedToolAudio,
     /// Tell the model when a prompt image was resized and include its dimensions.
     ImageResizeNotice,
+    /// Normalize prompt images with the reviewed image sanitizer.
+    SafeImageDecoder,
     /// Apply one shared pixel and token budget to every image, regardless of legacy detail hints.
     UnifiedImageBudget,
     /// Removed compatibility flag for always-on centralized image preparation.
@@ -439,6 +457,8 @@ pub enum Feature {
     GuardianRootHandoffContext,
     /// Review state-changing MAv2 calls and preserve native calls in Guardian history.
     GuardianNativeMultiAgentHistory,
+    /// Include the verified enclosing invocation in nested Guardian approvals.
+    GuardianNestedApprovalContext,
     /// Include completed node_repl or cua_repl Code Mode responses in Guardian reviews.
     GuardianEnhancedNodeReplTranscripts,
     /// Include completed node_repl or cua_repl Code Mode response images in Guardian reviews.
@@ -469,6 +489,8 @@ pub enum Feature {
     ReasoningEffortOverride,
     /// Add current-time reminders to model-visible context.
     CurrentTimeReminder,
+    /// Use UTC for the date in model-visible environment context.
+    UtcEnvironmentDate,
     /// Report failed clock reads to the model without failing the turn.
     NonfatalClockReadErrors,
     /// Route MCP tool approval prompts through the MCP elicitation request path.
@@ -1140,8 +1162,8 @@ pub const FEATURES: &[FeatureSpec] = &[
     FeatureSpec {
         id: Feature::TuiWorkspace,
         key: "tui_workspace",
-        stage: Stage::UnderDevelopment,
-        default_enabled: false,
+        stage: Stage::Stable,
+        default_enabled: true,
     },
     FeatureSpec {
         id: Feature::TuiMultiBackend,
@@ -1263,6 +1285,12 @@ pub const FEATURES: &[FeatureSpec] = &[
         default_enabled: false,
     },
     FeatureSpec {
+        id: Feature::PerEnvironmentContext,
+        key: "per_environment_context",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
         id: Feature::CwdRelativeTurnDiffs,
         key: "cwd_relative_turn_diffs",
         stage: Stage::UnderDevelopment,
@@ -1337,6 +1365,12 @@ pub const FEATURES: &[FeatureSpec] = &[
     FeatureSpec {
         id: Feature::CodeModePrewarm,
         key: "code_mode_prewarm",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
+        id: Feature::RestoredHistoryPrewarm,
+        key: "restored_history_prewarm",
         stage: Stage::UnderDevelopment,
         default_enabled: false,
     },
@@ -1587,6 +1621,12 @@ pub const FEATURES: &[FeatureSpec] = &[
         default_enabled: true,
     },
     FeatureSpec {
+        id: Feature::DaybreakProgramPropagation,
+        key: "daybreak_program_propagation",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
         id: Feature::EnableRequestCompression,
         key: "enable_request_compression",
         stage: Stage::Stable,
@@ -1715,6 +1755,12 @@ pub const FEATURES: &[FeatureSpec] = &[
         default_enabled: true,
     },
     FeatureSpec {
+        id: Feature::CatalogAppsInstructions,
+        key: "catalog_apps_instructions",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
         id: Feature::Psp,
         key: "psp",
         stage: Stage::UnderDevelopment,
@@ -1745,8 +1791,20 @@ pub const FEATURES: &[FeatureSpec] = &[
         default_enabled: false,
     },
     FeatureSpec {
+        id: Feature::McpSharedReplCwd,
+        key: "mcp_shared_repl_cwd",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
         id: Feature::McpLazyStdioStartup,
         key: "mcp_lazy_stdio_startup",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
+        id: Feature::MultiEnvironmentMcp,
+        key: "multi_environment_mcp",
         stage: Stage::UnderDevelopment,
         default_enabled: false,
     },
@@ -1813,8 +1871,14 @@ pub const FEATURES: &[FeatureSpec] = &[
     FeatureSpec {
         id: Feature::IncrementalToolsLegacy,
         key: "incremental_tools_legacy",
-        stage: Stage::UnderDevelopment,
-        default_enabled: false,
+        stage: Stage::Stable,
+        default_enabled: true,
+    },
+    FeatureSpec {
+        id: Feature::IncrementalToolsLegacyGcp,
+        key: "incremental_tools_legacy_gcp",
+        stage: Stage::Stable,
+        default_enabled: true,
     },
     FeatureSpec {
         id: Feature::SuppressModelChangeAnnouncements,
@@ -2003,6 +2067,12 @@ pub const FEATURES: &[FeatureSpec] = &[
         default_enabled: false,
     },
     FeatureSpec {
+        id: Feature::FileBackedToolAudio,
+        key: "file_backed_tool_audio",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
         id: Feature::ImageResizeNotice,
         key: "image_resize_notice",
         stage: Stage::UnderDevelopment,
@@ -2013,6 +2083,12 @@ pub const FEATURES: &[FeatureSpec] = &[
         key: "unified_image_budget",
         stage: Stage::Stable,
         default_enabled: true,
+    },
+    FeatureSpec {
+        id: Feature::SafeImageDecoder,
+        key: "safe_image_decoder",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
     },
     FeatureSpec {
         id: Feature::ResizeAllImages,
@@ -2147,6 +2223,12 @@ pub const FEATURES: &[FeatureSpec] = &[
         default_enabled: false,
     },
     FeatureSpec {
+        id: Feature::GuardianNestedApprovalContext,
+        key: "guardian_nested_approval_context",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
         id: Feature::GuardianEnhancedNodeReplTranscripts,
         key: "guardian_enhanced_node_repl_transcripts",
         stage: Stage::UnderDevelopment,
@@ -2233,6 +2315,12 @@ pub const FEATURES: &[FeatureSpec] = &[
     FeatureSpec {
         id: Feature::CurrentTimeReminder,
         key: "current_time_reminder",
+        stage: Stage::UnderDevelopment,
+        default_enabled: false,
+    },
+    FeatureSpec {
+        id: Feature::UtcEnvironmentDate,
+        key: "utc_environment_date",
         stage: Stage::UnderDevelopment,
         default_enabled: false,
     },

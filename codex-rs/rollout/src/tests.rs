@@ -805,6 +805,7 @@ async fn test_list_conversations_latest_first() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -831,6 +832,7 @@ async fn test_list_conversations_latest_first() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -857,6 +859,7 @@ async fn test_list_conversations_latest_first() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -976,6 +979,7 @@ async fn test_pagination_cursor() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -1002,6 +1006,7 @@ async fn test_pagination_cursor() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -1064,6 +1069,7 @@ async fn test_pagination_cursor() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -1090,6 +1096,7 @@ async fn test_pagination_cursor() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -1144,6 +1151,7 @@ async fn test_pagination_cursor() {
             git_origin_url: None,
             source: Some(SessionSource::VSCode),
             history_mode: Default::default(),
+            attached_to_thread_id: None,
             parent_thread_id: None,
             agent_nickname: None,
             agent_role: None,
@@ -1353,6 +1361,7 @@ async fn test_get_thread_contents() {
             git_origin_url: None,
             source: Some(SessionSource::VSCode),
             history_mode: Default::default(),
+            attached_to_thread_id: None,
             parent_thread_id: None,
             agent_nickname: None,
             agent_role: None,
@@ -1771,6 +1780,7 @@ async fn test_filesystem_cursor_pages_through_same_timestamp_ties() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -1797,6 +1807,7 @@ async fn test_filesystem_cursor_pages_through_same_timestamp_ties() {
                 git_origin_url: None,
                 source: Some(SessionSource::VSCode),
                 history_mode: Default::default(),
+                attached_to_thread_id: None,
                 parent_thread_id: None,
                 agent_nickname: None,
                 agent_role: None,
@@ -1915,6 +1926,44 @@ async fn test_source_filter_excludes_non_matching_sessions() {
     assert!(all_paths.iter().any(|path| {
         path.ends_with("rollout-2025-08-01T10-00-00-00000000-0000-0000-0000-00000000004d.jsonl")
     }));
+}
+
+#[tokio::test]
+async fn test_listing_filters_use_canonical_session_metadata() -> Result<()> {
+    let home = TempDir::new()?;
+    let id = Uuid::from_u128(78);
+    let ts = "2025-08-03T10-00-00";
+    write_session_file(
+        home.path(),
+        ts,
+        id,
+        /*num_records*/ 0,
+        Some(SessionSource::Exec),
+    )?;
+    let path = home
+        .path()
+        .join(format!("sessions/2025/08/03/rollout-{ts}-{id}.jsonl"));
+    let contents = fs::read_to_string(&path)?;
+    let mut lines = contents.lines();
+    let canonical = lines.next().expect("canonical metadata");
+    let user = lines.next().expect("user event");
+    let mut copied: serde_json::Value = serde_json::from_str(canonical)?;
+    copied["payload"]["source"] = serde_json::json!("cli");
+    fs::write(&path, format!("{canonical}\n{copied}\n{user}\n"))?;
+
+    let page = get_threads(
+        home.path(),
+        /*page_size*/ 10,
+        /*cursor*/ None,
+        ThreadSortKey::CreatedAt,
+        INTERACTIVE_SESSION_SOURCES.as_slice(),
+        /*model_providers*/ None,
+        /*cwd_filters*/ None,
+        TEST_PROVIDER,
+    )
+    .await?;
+    assert_eq!(page.items, Vec::new());
+    Ok(())
 }
 
 #[tokio::test]

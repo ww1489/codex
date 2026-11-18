@@ -164,6 +164,7 @@ workspace_root_test = rule(
         "env": attr.string_dict(),
         "env_inherit": attr.string_list(),
         "runfile_env": attr.label_keyed_string_dict(
+            allow_files = True,
             cfg = "target",
         ),
         "test_bin": attr.label(
@@ -215,6 +216,7 @@ def codex_rust_crate(
         integration_compile_data_extra = [],
         integration_test_args = [],
         unit_test_args = [],
+        unit_test_env = {},
         binary_test_target_compatible_with = [],
         binary_unit_test_windows_runtime = None,
         integration_test_timeout = None,
@@ -268,6 +270,7 @@ def codex_rust_crate(
             tests, including resources embedded with include_str! or include_bytes!.
         integration_test_args: Optional args for integration test binaries.
         unit_test_args: Optional args for the unit test binary.
+        unit_test_env: Extra runtime environment entries for library unit tests.
         binary_test_target_compatible_with: Platform constraints for binary unit tests.
         binary_unit_test_windows_runtime: Runtime directory containing bin/ DLLs for Windows binary unit tests.
         integration_test_timeout: Optional Bazel timeout for integration test
@@ -410,7 +413,7 @@ def codex_rust_crate(
 
         workspace_root_test(
             name = unit_test_name,
-            env = test_env,
+            env = test_env | unit_test_env,
             runfile_env = {
                 binary: "CARGO_BIN_EXE_" + Label(binary).name
                 for binary in extra_binaries

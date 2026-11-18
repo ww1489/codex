@@ -2558,6 +2558,17 @@ async fn slash_keymap_debug_can_inspect_app_shortcuts() {
 }
 
 #[tokio::test]
+async fn slash_rc_arguments_direct_user_to_menu() {
+    let (mut chat, mut rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
+
+    submit_composer_text(&mut chat, "/rc stop");
+
+    let [cell]: [_; 1] = drain_insert_history(&mut rx).try_into().expect("one cell");
+    insta::assert_snapshot!(lines_to_single_string(&cell), @"■ Open /rc and choose Disable to turn off remote control.");
+    assert!(op_rx.try_recv().is_err(), "expected no agent turn");
+}
+
+#[tokio::test]
 async fn slash_keymap_invalid_args_show_usage() {
     let (mut chat, mut rx, mut op_rx) = make_chatwidget_manual(/*model_override*/ None).await;
 
@@ -3026,14 +3037,24 @@ async fn slash_mcp_login_targets_the_active_thread() {
     let thread_id = ThreadId::new();
     chat.thread_id = Some(thread_id);
 
-    submit_composer_text(&mut chat, "/mcp login enterprise");
-
-    assert_matches!(rx.try_recv(), Ok(AppEvent::FollowTranscript));
-    assert_matches!(
-        rx.try_recv(),
-        Ok(AppEvent::StartMcpLogin { name, thread_id: actual_thread_id })
-            if name == "enterprise" && actual_thread_id == thread_id
-    );
+    for (args, expected_name, expected_environment_id) in [
+        ("enterprise", "enterprise", None),
+        ("Team's notes", "Team's notes", None),
+        (
+            "\"Team notes\" --environment env-b",
+            "Team notes",
+            Some("env-b"),
+        ),
+    ] {
+        submit_composer_text(&mut chat, &format!("/mcp login {args}"));
+        assert_matches!(rx.try_recv(), Ok(AppEvent::FollowTranscript));
+        assert_matches!(
+            rx.try_recv(),
+            Ok(AppEvent::StartMcpLogin { name, environment_id, thread_id: actual_thread_id })
+                if name == expected_name && environment_id.as_deref() == expected_environment_id
+                    && actual_thread_id == thread_id
+        );
+    }
     assert!(op_rx.try_recv().is_err(), "expected no core op to be sent");
 }
 
@@ -3050,7 +3071,7 @@ async fn slash_mcp_invalid_args_show_usage() {
         .collect::<Vec<_>>()
         .join("\n");
     assert!(
-        rendered.contains("Usage: /mcp [verbose | login <name>]"),
+        rendered.contains("Usage: /mcp [verbose | login <name> [--environment <id>]]"),
         "expected usage message, got: {rendered:?}"
     );
     assert_eq!(recall_latest_after_clearing(&mut chat), "/mcp full");
@@ -3869,14 +3890,14 @@ async fn transcript_copy_feedback_stays_in_the_footer_without_history_or_interru
     assert!(operations.try_recv().is_err());
     insta::assert_snapshot!(
         "transcript_copy_success",
-        render_bottom_popup(&chat, /*width*/ 80)
+        normalize_snapshot_paths(render_bottom_popup(&chat, /*width*/ 80))
     );
     chat.show_selection_copy_result(Ok(crate::clipboard_copy::CopyStatus::Unconfirmed));
     assert_eq!(drain_insert_history(&mut events).len(), 0);
     assert!(operations.try_recv().is_err());
     insta::assert_snapshot!(
         "transcript_copy_unconfirmed",
-        render_bottom_popup(&chat, /*width*/ 80)
+        normalize_snapshot_paths(render_bottom_popup(&chat, /*width*/ 80))
     );
     chat.open_warnings(&[Arc::new(history_cell::new_warning_event(
         "selected café".into(),
@@ -3886,7 +3907,7 @@ async fn transcript_copy_feedback_stays_in_the_footer_without_history_or_interru
     assert!(operations.try_recv().is_err());
     insta::assert_snapshot!(
         "transcript_copy_failure",
-        render_bottom_popup(&chat, /*width*/ 80)
+        normalize_snapshot_paths(render_bottom_popup(&chat, /*width*/ 80))
     );
 }
 

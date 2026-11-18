@@ -27,7 +27,10 @@ use codex_protocol::models::PermissionProfile;
 use codex_protocol::models::SandboxEnforcement;
 use codex_protocol::permissions::NetworkSandboxPolicy;
 use codex_sandboxing::SandboxCommand;
+use codex_sandboxing::SandboxExecutables;
 use codex_sandboxing::SandboxManager;
+use codex_sandboxing::SandboxNetwork;
+use codex_sandboxing::SandboxSelection;
 use codex_sandboxing::SandboxTransformRequest;
 use codex_sandboxing::SandboxType as SandboxBackend;
 use codex_sandboxing::SandboxType::WindowsMxc;
@@ -100,6 +103,7 @@ pub async fn run_command_under_landlock(
     loader_overrides: LoaderOverrides,
 ) -> anyhow::Result<()> {
     let LandlockCommand {
+        transparent_tcp,
         sandbox_state,
         permissions_profile,
         config_profile: _,
@@ -123,7 +127,7 @@ pub async fn run_command_under_landlock(
         command,
         config_overrides,
         codex_linux_sandbox_exe,
-        SandboxType::Landlock,
+        SandboxType::Landlock { transparent_tcp },
         /*log_denials*/ false,
         &[],
     )
@@ -169,7 +173,9 @@ pub async fn run_command_under_windows_sandbox(
 enum SandboxType {
     #[cfg(target_os = "macos")]
     Seatbelt,
-    Landlock,
+    Landlock {
+        transparent_tcp: bool,
+    },
     Windows,
 }
 
@@ -303,12 +309,28 @@ async fn run_command_under_sandbox(
         config.effective_local_windows_sandbox_type()
     };
 
+    let transparent_tcp = match sandbox_type {
+        SandboxType::Landlock { transparent_tcp } => {
+            transparent_tcp
+                || config
+                    .permissions
+                    .network
+                    .as_ref()
+                    .is_some_and(codex_core::config::NetworkProxySpec::transparent_tcp)
+        }
+        #[cfg(target_os = "macos")]
+        SandboxType::Seatbelt => false,
+        SandboxType::Windows => false,
+    };
     let sandbox = match permission_profile.enforcement() {
+        SandboxEnforcement::Disabled | SandboxEnforcement::External if transparent_tcp => {
+            anyhow::bail!("--transparent-tcp requires a managed Linux sandbox");
+        }
         SandboxEnforcement::Disabled | SandboxEnforcement::External => SandboxBackend::None,
         SandboxEnforcement::Managed => match sandbox_type {
             #[cfg(target_os = "macos")]
             SandboxType::Seatbelt => SandboxBackend::MacosSeatbelt,
-            SandboxType::Landlock => SandboxBackend::LinuxSeccomp,
+            SandboxType::Landlock { .. } => SandboxBackend::LinuxSeccomp,
             #[cfg(windows)]
             SandboxType::Windows if windows_sandbox_type == WindowsMxc => WindowsMxc,
             #[cfg(windows)]
@@ -385,6 +407,10 @@ async fn run_command_under_sandbox(
     let manager = SandboxManager::for_inherited_terminal(allow_unix_sockets);
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     let manager = SandboxManager::new();
+    if transparent_tcp && network.is_none() {
+        anyhow::bail!("--transparent-tcp requires a managed network proxy");
+    }
+    let manager = manager.with_linux_sandbox_transparent_tcp(transparent_tcp);
     let workspace_roots = sandbox_state.is_none().then(|| {
         config
             .permissions
@@ -412,12 +438,14 @@ async fn run_command_under_sandbox(
         },
         permissions: &permission_profile,
         workspace_roots: workspace_roots.as_deref(),
-        sandbox,
-        enforce_managed_network: network.is_some(),
-        network: network.as_ref(),
-        environment_id: None,
+        selection: SandboxSelection::Explicit(sandbox),
+        network: SandboxNetwork::new(
+            network.is_some(),
+            network.as_ref(),
+            /*environment_id*/ None,
+        ),
         sandbox_policy_cwd: &cwd,
-        sandbox_exe: sandbox_exe.as_deref(),
+        executables: SandboxExecutables::Launcher(sandbox_exe.as_deref()),
         use_legacy_landlock,
         windows_sandbox_level: WindowsSandboxLevel::Disabled,
     })?;

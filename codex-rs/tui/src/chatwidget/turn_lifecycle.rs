@@ -1,5 +1,6 @@
 //! Agent-turn lifecycle state for `ChatWidget`.
 
+use std::collections::HashMap;
 use std::collections::HashSet;
 use std::time::Instant;
 
@@ -16,8 +17,9 @@ pub(super) struct TurnLifecycleState {
     /// Cloud confirmed admission to a turn whose live start we have yet to process.
     pub(super) admitted_turn_id: Option<String>,
     pub(super) budget_limited_turn_ids: HashSet<String>,
-    /// Completion labels already inserted into this thread's visible history.
-    pub(super) rendered_completion_turn_ids: HashSet<String>,
+    /// False records an untimed turn boundary that may still receive a completion label.
+    pub(super) rendered_completion_turn_ids: HashMap<String, bool>,
+    pub(super) generated_images: crate::history_cell::PendingGeneratedImages,
     pub(super) goal_status_active_turn_started_at: Option<Instant>,
 }
 
@@ -30,7 +32,8 @@ impl TurnLifecycleState {
             has_turn_history: false,
             admitted_turn_id: None,
             budget_limited_turn_ids: HashSet::new(),
-            rendered_completion_turn_ids: HashSet::new(),
+            rendered_completion_turn_ids: HashMap::new(),
+            generated_images: Default::default(),
             goal_status_active_turn_started_at: None,
         }
     }
@@ -65,6 +68,7 @@ impl TurnLifecycleState {
         self.admitted_turn_id = None;
         self.budget_limited_turn_ids.clear();
         self.rendered_completion_turn_ids.clear();
+        self.generated_images = Default::default();
     }
 
     pub(super) fn set_prevent_idle_sleep(&mut self, enabled: bool) {

@@ -1167,7 +1167,9 @@ async fn thread_list(endpoint: &Endpoint, config_overrides: &[String], limit: u3
         println!("< initialize response: {initialize:?}");
 
         let response = client.thread_list(ThreadListParams {
+            include_attached_threads: false,
             current_account_only: false,
+            included_thread_ids: None,
             excluded_thread_ids: None,
             attached_to_thread_id: None,
             originators: None,

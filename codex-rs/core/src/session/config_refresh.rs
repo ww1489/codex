@@ -1,4 +1,4 @@
-//! Publishes resolved MCP configuration and host timing rollouts for future turns.
+//! Publishes refreshable configuration while preserving unrelated session settings.
 
 use crate::McpRefreshReason;
 use std::sync::Arc;
@@ -98,6 +98,10 @@ impl Session {
         if !matches!(scope, RuntimeConfigRefresh::UserFiles) {
             for (feature, description) in [
                 (Feature::Mcp20260728, "MCP protocol"),
+                (
+                    Feature::DaybreakProgramPropagation,
+                    "Daybreak helper propagation",
+                ),
                 (Feature::CodexAppsMcp20260728, "Codex Apps MCP protocol"),
             ] {
                 if let Err(err) = config
@@ -190,9 +194,6 @@ impl Session {
             }
             state.session_configuration.original_config_do_not_use = Arc::clone(&config);
             drop(policy_guard);
-            if matches!(scope, RuntimeConfigRefresh::Mcp) {
-                self.services.mcp_runtime.invalidate_resource_caches();
-            }
             self.mark_mcp_runtime_dirty(match scope {
                 RuntimeConfigRefresh::User => McpRefreshReason::UserConfigReloaded,
                 RuntimeConfigRefresh::Mcp => McpRefreshReason::McpConfigReloaded,
