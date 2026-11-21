@@ -66,17 +66,6 @@ impl ToolExecutor<ToolInvocation> for ExtensionToolAdapter {
     {
         Box::pin(async move {
             let step = &invocation.step_context;
-            let _native_search = if invocation.tool_name.namespace.as_deref() == Some("web")
-                && invocation.tool_name.name == "run"
-            {
-                crate::model_search::SearchOwner::reserve_native_fallback(
-                    &step.extension_data,
-                    &invocation.session.services.thread_extension_data,
-                )
-                .map_err(|err| codex_tools::FunctionCallError::RespondToModel(err.to_string()))?
-            } else {
-                None
-            };
             let selected: Vec<_> = match &invocation.environments {
                 ToolEnvironments::Arguments(environments) => {
                     environments.iter().map(|(_, env)| env.as_ref()).collect()
@@ -633,6 +622,7 @@ mod tests {
             input_images: Vec::new(),
             imagegen_request_id: None,
             generation_id: None,
+            image_metadata: Default::default(),
         });
         let expected_completed_item = ExtensionItem::ImageGeneration(ImageGenerationItem {
             id: "call-image".to_string(),
@@ -647,6 +637,7 @@ mod tests {
             input_images: Vec::new(),
             imagegen_request_id: None,
             generation_id: None,
+            image_metadata: Default::default(),
         });
         codex_tools::TurnItemEmitter::emit_started(
             &emitter,
@@ -674,6 +665,7 @@ mod tests {
                     saved_path: Some(expected_path.clone()),
                     input_images: Vec::new(),
                     generation_id: None,
+                    image_metadata: Default::default(),
                 })],
             },
         )
